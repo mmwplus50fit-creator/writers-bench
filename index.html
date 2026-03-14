@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Writer's Bench v2</title>
-  <style>
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<style>
     :root{
       --bg:#f7f7f7;
       --panel:#ffffff;
@@ -316,9 +317,42 @@
 
   </div>
 
-  <script>
-    const STORAGE_KEY = "writersBenchV2";
+<script>
 
+const SUPABASE_URL = "https://zqoivfhwzqddhlluvxwn.supabase.co";
+
+const SUPABASE_KEY = "sb_publishable_AoR8GsvCiQGdldGlbUDMdA_RMNSpaRF";
+
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const STORAGE_KEY = "writersBenchV2";
+
+async function saveSessionToSupabase(session) {
+
+  const { data, error } = await supabase
+    .from("sessions")
+    .insert([{
+      day_number: session.day_number,
+      session_date: session.session_date,
+      prompt: session.prompt,
+      writing: session.writing,
+      feedback: session.feedback,
+      reflection: session.reflection,
+      min_words: session.min_words,
+      max_words: session.max_words,
+      status: session.status,
+      completed_at: session.completed_at
+    }]);
+
+  if (error) {
+    console.error("Supabase save error:", error);
+  } else {
+    console.log("Session saved:", data);
+  }
+}
     const defaultState = {
       sessions: [],
       current: null,
