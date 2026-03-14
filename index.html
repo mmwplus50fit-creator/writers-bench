@@ -149,6 +149,12 @@
       font-weight:bold;
     }
 
+		.pill.blue{
+  background:#3a78d4;
+  color:#fff;
+  border-color:#3a78d4;
+  font-weight:bold;
+}
     .timer{
       font-weight:bold;
       min-width:56px;
@@ -502,20 +508,32 @@ async function saveSessionToSupabase(session) {
       return streak;
     }
 
-    function updateWordDisplay() {
-      const c = countWords(writingBox.value);
-      wordCount.textContent = c;
-      wordPill.classList.remove("amber", "green");
+function updateWordDisplay() {
+  const c = countWords(writingBox.value);
 
-      const min = parseInt(minWords.value, 10);
-      const max = parseInt(maxWords.value, 10);
+  const min = parseInt(minWords.value, 10);
+  const max = parseInt(maxWords.value, 10);
 
-      if (Number.isFinite(max) && max > 0 && c >= max) {
-        wordPill.classList.add("green");
-      } else if (Number.isFinite(min) && min > 0 && c >= min) {
-        wordPill.classList.add("amber");
-      }
+  if (Number.isFinite(min) && min > 0) {
+    if (c >= min) {
+      wordCount.textContent = `${c} ✓`;
+    } else {
+      wordCount.textContent = `${c} / ${min}`;
     }
+  } else {
+    wordCount.textContent = c;
+  }
+
+  wordPill.classList.remove("amber", "green", "blue");
+
+  if (state.current.status === "completed") {
+    wordPill.classList.add("blue");
+  } else if (Number.isFinite(max) && max > 0 && c >= max) {
+    wordPill.classList.add("green");
+  } else if (Number.isFinite(min) && min > 0 && c >= min) {
+    wordPill.classList.add("amber");
+  }
+}
 
     function renderHistory() {
       if (!state.sessions.length) {
@@ -580,6 +598,11 @@ async function saveSessionToSupabase(session) {
       maxWords.value = state.current.max;
 
       updateWordDisplay();
+
+		if (state.current.status === "completed") {
+  wordPill.classList.remove("amber","green");
+  wordPill.classList.add("blue");
+}
       renderHistory();
       renderCompletionBanner();
 
@@ -780,7 +803,10 @@ ${state.current.reflection || ""}`;
         max: state.current.max,
         completedAt: new Date().toISOString()
       };
-
+		
+  // reset word count color
+  wordPill.classList.remove("amber", "green");
+		
 	saveSessionToSupabase({
   day_number: frozen.dayNumber,
   session_date: frozen.sessionDate,
