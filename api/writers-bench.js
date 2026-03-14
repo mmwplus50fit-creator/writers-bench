@@ -34,7 +34,7 @@ You are Writer's Bench, a private daily writing coach.
 Create one deliberate-practice writing session.
 Avoid random novelty for its own sake.
 Keep the session concise, clear, and useful.
-Return valid JSON only.
+Return only valid JSON that matches the schema exactly. Do not include markdown, code fences, or explanatory text.
 `.trim();
 
       userPrompt = `
@@ -78,7 +78,7 @@ You are Writer's Bench, a calm, encouraging, honest writing coach.
 Give brief, concrete craft feedback.
 Do not be gushy.
 Do not be cruel.
-Return valid JSON only.
+Return only valid JSON that matches the schema exactly. Do not include markdown, code fences, or explanatory text.
 `.trim();
 
       userPrompt = `
@@ -162,14 +162,38 @@ Return exactly these fields:
 
     let parsed = null;
 
-    try {
-      parsed = JSON.parse(data.output_text);
-    } catch (err) {
+try {
+  if (typeof data.output_text === "string" && data.output_text.trim()) {
+    parsed = JSON.parse(data.output_text);
+  } else {
+    const textParts = [];
+
+    for (const item of data.output || []) {
+      for (const content of item.content || []) {
+        if (content.type === "output_text" && typeof content.text === "string") {
+          textParts.push(content.text);
+        }
+      }
+    }
+
+    const combined = textParts.join("").trim();
+
+    if (!combined) {
       return res.status(500).json({
-        error: "Could not parse model JSON output",
+        error: "No JSON text returned by model",
         raw: data
       });
     }
+
+    parsed = JSON.parse(combined);
+  }
+} catch (err) {
+  return res.status(500).json({
+    error: "Could not parse model JSON output",
+    detail: err.message,
+    raw_text: data.output_text || null
+  });
+}
 
     return res.status(200).json(parsed);
   } catch (err) {
