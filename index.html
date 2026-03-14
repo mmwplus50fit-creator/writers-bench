@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Writer's Bench v2</title>
-	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 	<style>
     :root{
       --bg:#f7f7f7;
@@ -320,17 +320,19 @@
 <script>
 
 const SUPABASE_URL = "https://zqoivfhwzqddhlluvxwn.supabase.co";
-
 const SUPABASE_KEY = "sb_publishable_AoR8GsvCiQGdldGlbUDMdA_RMNSpaRF";
 
-const supabase = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+const supabase = window.supabase
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
 
 const STORAGE_KEY = "writersBenchV2";
 
 async function saveSessionToSupabase(session) {
+  if (!supabase) {
+    console.error("Supabase client did not load.");
+    return;
+  }
 
   const { data, error } = await supabase
     .from("sessions")
