@@ -771,6 +771,18 @@ ${state.current.reflection || ""}`;
         completedAt: new Date().toISOString()
       };
 
+	saveSessionToSupabase({
+  day_number: frozen.dayNumber,
+  session_date: frozen.sessionDate,
+  prompt: frozen.prompt,
+  writing: frozen.writing,
+  feedback: frozen.feedback,
+  reflection: frozen.reflection,
+  min_words: frozen.min,
+  max_words: frozen.max,
+  status: "completed",
+  completed_at: frozen.completedAt
+});	
       const existingIndex = state.sessions.findIndex(
         session => session.dayNumber === frozen.dayNumber
       );
