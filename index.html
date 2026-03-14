@@ -318,23 +318,31 @@
   </div>
 
 <script>
-
 const SUPABASE_URL = "https://zqoivfhwzqddhlluvxwn.supabase.co";
 const SUPABASE_KEY = "sb_publishable_AoR8GsvCiQGdldGlbUDMdA_RMNSpaRF";
 
-const supabase = window.supabase
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-  : null;
+let supabaseClient = null;
+
+try {
+  if (window.supabase && typeof window.supabase.createClient === "function") {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log("Supabase client loaded.");
+  } else {
+    console.warn("Supabase library did not load. Writer's Bench will run without cloud save.");
+  }
+} catch (err) {
+  console.error("Supabase init failed:", err);
+}
 
 const STORAGE_KEY = "writersBenchV2";
 
 async function saveSessionToSupabase(session) {
-  if (!supabase) {
-    console.error("Supabase client did not load.");
+  if (!supabaseClient) {
+    console.warn("No Supabase client. Skipping cloud save.");
     return;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from("sessions")
     .insert([{
       day_number: session.day_number,
