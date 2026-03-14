@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Writer's Bench v2</title>
+  <style>
+    :root{
+      --bg:#f7f7f7;
+      --panel:#ffffff;
+      --text:#222222;
+      --muted:#666666;
+      --line:#d8d8d8;
+      --button:#ececec;
+      --button-hover:#e2e2e2;
+      --button-primary:#dcdcdc;
+      --amber:#d7941d;
+      --green:#2f8f4e;
+      --shadow:0 0 0 rgba(0,0,0,0);
+    }
+
+    * { box-sizing: border-box; }
+
+    body{
+      margin:0;
+      padding:24px 16px 48px;
+      font-family:Arial, Helvetica, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.45;
+    }
+
+    .wrap{
+      max-width:900px;
+      margin:0 auto;
+    }
+
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--line);
+      padding:18px;
+      margin-bottom:16px;
+      box-shadow:var(--shadow);
+    }
+
+    h1,h2,h3,p{ margin-top:0; }
+
+    h1{ font-size:1.8rem; margin-bottom:8px; }
+    h2{ font-size:1.1rem; margin-bottom:10px; }
+    h3{ font-size:1rem; margin-bottom:8px; }
+
+    .row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+
+    .stack{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px 18px;
+      font-size:0.95rem;
+      color:var(--muted);
+    }
+
+    label{
+      display:block;
+      font-weight:bold;
+      font-size:0.95rem;
+      margin-bottom:6px;
+    }
+
+    textarea,
+    input[type="number"]{
+      width:100%;
+      border:1px solid var(--line);
+      padding:12px;
+      font:inherit;
+      color:var(--text);
+      background:#fff;
+    }
+
+    textarea{
+      min-height:120px;
+      resize:vertical;
+    }
+
+    input[type="number"]{
+      width:120px;
+    }
+
+    #writingBox{ min-height:320px; }
+
+    button{
+      appearance:none;
+      border:1px solid var(--line);
+      background:var(--button);
+      color:var(--text);
+      padding:10px 14px;
+      font:inherit;
+      cursor:pointer;
+    }
+
+    button:hover{ background:var(--button-hover); }
+
+    button.primary{
+      background:var(--button-primary);
+      font-weight:bold;
+    }
+
+    button:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+    }
+
+    .small{
+      font-size:.9rem;
+      color:var(--muted);
+    }
+
+    .pill{
+      display:inline-block;
+      border:1px solid var(--line);
+      padding:6px 10px;
+      font-size:.9rem;
+      color:var(--muted);
+      background:#fafafa;
+    }
+
+    .pill.amber{
+      background:var(--amber);
+      color:#fff;
+      border-color:var(--amber);
+      font-weight:bold;
+    }
+
+    .pill.green{
+      background:var(--green);
+      color:#fff;
+      border-color:var(--green);
+      font-weight:bold;
+    }
+
+    .timer{
+      font-weight:bold;
+      min-width:56px;
+    }
+
+    .copy-note{
+      font-size:.9rem;
+      color:var(--muted);
+      min-height:1.2em;
+    }
+
+    .complete-banner{
+      border:1px solid var(--line);
+      background:#fbfbfb;
+      padding:12px;
+      font-weight:bold;
+    }
+
+    details summary{
+      cursor:pointer;
+      font-weight:bold;
+    }
+
+    .history-session{
+      border-top:1px solid var(--line);
+      padding-top:12px;
+      margin-top:12px;
+    }
+
+    .history-session details{
+      border:1px solid var(--line);
+      padding:10px 12px;
+      background:#fcfcfc;
+    }
+
+    .history-session summary{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      list-style:none;
+    }
+
+    .history-session summary::-webkit-details-marker{
+      display:none;
+    }
+
+    .mono{
+      white-space:pre-wrap;
+      word-break:break-word;
+      background:#fff;
+      border:1px solid var(--line);
+      padding:10px;
+    }
+
+    .hidden{ display:none; }
+
+    @media (max-width:700px){
+      body{ padding:16px 10px 36px; }
+      .panel{ padding:14px; }
+      #writingBox{ min-height:260px; }
+      input[type="number"]{ width:100px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <section class="panel">
+      <h1>Writer's Bench</h1>
+      <div class="meta">
+        <div><strong>Day:</strong> <span id="dayNumber">1</span></div>
+        <div><strong>Date:</strong> <span id="sessionDate">—</span></div>
+        <div><strong>Streak:</strong> <span id="streakCount">0</span></div>
+        <div><strong>Status:</strong> <span id="statusText">Ready</span></div>
+        <div><strong>Suggested Time:</strong> <span id="suggestedTimeText">10 minutes</span></div>
+      </div>
+    </section>
+
+    <section class="panel stack">
+      <h2>Today</h2>
+      <div class="row">
+        <button id="copyPromptBtn" class="primary">Copy Prompt Request</button>
+        <button id="startTimerBtn">Start Timer</button>
+        <button id="stopTimerBtn">Stop Timer</button>
+        <span id="timerDisplay" class="timer">10:00</span>
+      </div>
+      <div id="copyPromptNote" class="copy-note"></div>
+      <p class="small">Use the copied text in ChatGPT to generate today’s session. Then paste the prompt below.</p>
+    </section>
+
+    <section class="panel">
+      <label for="promptBox">Prompt</label>
+      <textarea id="promptBox" placeholder="Paste today's prompt here."></textarea>
+    </section>
+
+    <section class="panel">
+      <label>Suggested Word Count Range</label>
+      <div class="row">
+        <div>
+          <label for="minWords" class="small">Minimum</label>
+          <input id="minWords" type="number" min="0" step="1" placeholder="150" />
+        </div>
+        <div>
+          <label for="maxWords" class="small">Maximum</label>
+          <input id="maxWords" type="number" min="0" step="1" placeholder="300" />
+        </div>
+      </div>
+      <p class="small">Gray: below minimum. Amber: minimum reached. Green: maximum reached.</p>
+    </section>
+
+    <section class="panel">
+      <label for="writingBox">Writing</label>
+      <textarea id="writingBox" placeholder="Write here."></textarea>
+      <div class="row" style="margin-top:10px;">
+        <div id="wordPill" class="pill">Word Count: <span id="wordCount">0</span></div>
+        <div class="pill">Autosave: On</div>
+      </div>
+      <div class="small" style="margin-top:6px;">The word count turns amber at the minimum and green at the maximum.</div>
+      <div class="row" style="margin-top:12px;">
+        <button id="copyFeedbackBtn" class="primary">Copy Submission for Feedback</button>
+      </div>
+      <div id="copyFeedbackNote" class="copy-note"></div>
+    </section>
+
+    <section class="panel">
+      <label for="feedbackBox">Feedback</label>
+      <textarea id="feedbackBox" placeholder="Paste ChatGPT feedback here."></textarea>
+    </section>
+
+    <section class="panel">
+      <label for="reflectionBox">Reflection</label>
+      <textarea id="reflectionBox" placeholder="What did you notice today?"></textarea>
+    </section>
+
+    <section class="panel">
+      <div class="row">
+        <button id="completeBtn" class="primary">Complete Session</button>
+        <button id="nextDayBtn" class="hidden">Start Next Day</button>
+        <button id="clearBtn">Clear Current Draft</button>
+        <button id="resetBtn">Reset Bench</button>
+      </div>
+      <p class="small" style="margin-top:10px;">Complete Session freezes today’s work. Download after completion if you like, then start the next day when ready.</p>
+      <div id="completeBannerWrap"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Export Session</h2>
+      <p class="small">Download today’s work as separate files or as one full archive.</p>
+      <div class="row">
+        <button id="dlPromptBtn">Download Prompt</button>
+        <button id="dlWritingBtn">Download Submission</button>
+        <button id="dlFeedbackBtn">Download Feedback</button>
+        <button id="dlReflectionBtn">Download Reflection</button>
+        <button id="dlFullBtn" class="primary">Download Full Session</button>
+      </div>
+      <div id="downloadNote" class="copy-note" style="margin-top:10px;"></div>
+    </section>
+
+    <section class="panel">
+      <details open>
+        <summary>Previous Sessions</summary>
+        <div id="historyWrap" class="small" style="margin-top:12px;"></div>
+      </details>
+    </section>
+
+  </div>
+
+  <script>
+    const STORAGE_KEY = "writersBenchV2";
+
+    const defaultState = {
+      sessions: [],
+      current: null,
+      timerStartedOnce: false
+    };
+
+    function deepCopy(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function todayLocalDate() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, "0");
+      const d = String(now.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function formatDateHuman(dateStr) {
+      if (!dateStr) return "Unknown date";
+      const [y, m, d] = dateStr.split("-");
+      return `${y}-${m}-${d}`;
+    }
+
+    function createBlankCurrent(existingSessions) {
+      return {
+        dayNumber: (existingSessions?.length || 0) + 1,
+        sessionDate: todayLocalDate(),
+        prompt: "",
+        writing: "",
+        feedback: "",
+        reflection: "",
+        min: "",
+        max: "",
+        status: "ready"
+      };
+    }
+
+    function normalizeState(raw) {
+      const state = {
+        ...deepCopy(defaultState),
+        ...(raw || {})
+      };
+      state.sessions = Array.isArray(state.sessions) ? state.sessions : [];
+      state.current = state.current || createBlankCurrent(state.sessions);
+
+      if (!state.current.dayNumber || state.current.dayNumber < 1) {
+        state.current.dayNumber = state.sessions.length + 1;
+      }
+      if (!state.current.sessionDate) {
+        state.current.sessionDate = todayLocalDate();
+      }
+      if (!state.current.status) {
+        state.current.status = "ready";
+      }
+      return state;
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return normalizeState(null);
+        return normalizeState(JSON.parse(raw));
+      } catch {
+        return normalizeState(null);
+      }
+    }
+
+    let state = loadState();
+
+    const dayNumber = document.getElementById("dayNumber");
+    const sessionDate = document.getElementById("sessionDate");
+    const streakCount = document.getElementById("streakCount");
+    const statusText = document.getElementById("statusText");
+    const promptBox = document.getElementById("promptBox");
+    const writingBox = document.getElementById("writingBox");
+    const feedbackBox = document.getElementById("feedbackBox");
+    const reflectionBox = document.getElementById("reflectionBox");
+    const minWords = document.getElementById("minWords");
+    const maxWords = document.getElementById("maxWords");
+    const wordCount = document.getElementById("wordCount");
+    const wordPill = document.getElementById("wordPill");
+    const copyPromptNote = document.getElementById("copyPromptNote");
+    const copyFeedbackNote = document.getElementById("copyFeedbackNote");
+    const historyWrap = document.getElementById("historyWrap");
+    const completeBannerWrap = document.getElementById("completeBannerWrap");
+    const downloadNote = document.getElementById("downloadNote");
+    const completeBtn = document.getElementById("completeBtn");
+    const nextDayBtn = document.getElementById("nextDayBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function countWords(text) {
+      return text.trim() ? text.trim().split(/\s+/).length : 0;
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function getStatusText() {
+      if (state.current.status === "completed") return "Complete";
+      const hasWork = state.current.prompt || state.current.writing || state.current.feedback || state.current.reflection;
+      return hasWork ? "In Progress" : "Ready";
+    }
+
+    function getUniqueCompletedDates() {
+      const dates = state.sessions
+        .map(session => session.sessionDate)
+        .filter(Boolean);
+      return [...new Set(dates)].sort();
+    }
+
+    function computeStreak() {
+      const uniqueDates = getUniqueCompletedDates();
+      if (!uniqueDates.length) return 0;
+
+      let streak = 1;
+      for (let i = uniqueDates.length - 1; i > 0; i--) {
+        const curr = new Date(uniqueDates[i] + "T00:00:00");
+        const prev = new Date(uniqueDates[i - 1] + "T00:00:00");
+        const diffDays = Math.round((curr - prev) / 86400000);
+        if (diffDays === 1) {
+          streak += 1;
+        } else if (diffDays === 0) {
+          continue;
+        } else {
+          break;
+        }
+      }
+      return streak;
+    }
+
+    function updateWordDisplay() {
+      const c = countWords(writingBox.value);
+      wordCount.textContent = c;
+      wordPill.classList.remove("amber", "green");
+
+      const min = parseInt(minWords.value, 10);
+      const max = parseInt(maxWords.value, 10);
+
+      if (Number.isFinite(max) && max > 0 && c >= max) {
+        wordPill.classList.add("green");
+      } else if (Number.isFinite(min) && min > 0 && c >= min) {
+        wordPill.classList.add("amber");
+      }
+    }
+
+    function renderHistory() {
+      if (!state.sessions.length) {
+        historyWrap.innerHTML = "<p>No completed sessions yet.</p>";
+        return;
+      }
+
+      const items = [...state.sessions].reverse().map((session) => {
+        const range = session.min || session.max
+          ? `${session.min || ""}${session.max ? "–" + session.max : ""}`
+          : "(none)";
+        return `
+          <div class="history-session">
+            <details>
+              <summary>
+                <span><strong>Day ${session.dayNumber}</strong></span>
+                <span>${escapeHtml(formatDateHuman(session.sessionDate))}</span>
+              </summary>
+              <div style="margin-top:10px;">
+                <div><strong>Word Range</strong></div>
+                <div class="mono">${escapeHtml(range)}</div>
+                <div style="margin-top:8px;"><strong>Prompt</strong></div>
+                <div class="mono">${escapeHtml(session.prompt || "(none)")}</div>
+                <div style="margin-top:8px;"><strong>Submission</strong></div>
+                <div class="mono">${escapeHtml(session.writing || "(none)")}</div>
+                <div style="margin-top:8px;"><strong>Feedback</strong></div>
+                <div class="mono">${escapeHtml(session.feedback || "(none)")}</div>
+                <div style="margin-top:8px;"><strong>Reflection</strong></div>
+                <div class="mono">${escapeHtml(session.reflection || "(none)")}</div>
+              </div>
+            </details>
+          </div>
+        `;
+      });
+
+      historyWrap.innerHTML = items.join("");
+    }
+
+    function renderCompletionBanner() {
+      if (state.current.status === "completed") {
+        completeBannerWrap.innerHTML = `
+          <div class="complete-banner">
+            Day ${state.current.dayNumber} complete. Download anything you want, then click Start Next Day when ready.
+          </div>
+        `;
+      } else {
+        completeBannerWrap.innerHTML = "";
+      }
+    }
+
+    function render() {
+      dayNumber.textContent = state.current.dayNumber;
+      sessionDate.textContent = formatDateHuman(state.current.sessionDate);
+      streakCount.textContent = computeStreak();
+      statusText.textContent = getStatusText();
+
+      promptBox.value = state.current.prompt;
+      writingBox.value = state.current.writing;
+      feedbackBox.value = state.current.feedback;
+      reflectionBox.value = state.current.reflection;
+      minWords.value = state.current.min;
+      maxWords.value = state.current.max;
+
+      updateWordDisplay();
+      renderHistory();
+      renderCompletionBanner();
+
+      const locked = state.current.status === "completed";
+      promptBox.disabled = locked;
+      writingBox.disabled = locked;
+      feedbackBox.disabled = locked;
+      reflectionBox.disabled = locked;
+      minWords.disabled = locked;
+      maxWords.disabled = locked;
+      document.getElementById("copyPromptBtn").disabled = false;
+      document.getElementById("copyFeedbackBtn").disabled = false;
+      completeBtn.disabled = locked;
+      nextDayBtn.classList.toggle("hidden", !locked);
+    }
+
+    function syncCurrentField(key, value) {
+      state.current[key] = value;
+      saveState();
+      statusText.textContent = getStatusText();
+    }
+
+    function autosave(field, key) {
+      field.addEventListener("input", () => {
+        syncCurrentField(key, field.value);
+      });
+    }
+
+    autosave(promptBox, "prompt");
+    autosave(feedbackBox, "feedback");
+    autosave(reflectionBox, "reflection");
+    autosave(minWords, "min");
+    autosave(maxWords, "max");
+
+    writingBox.addEventListener("input", () => {
+      syncCurrentField("writing", writingBox.value);
+      updateWordDisplay();
+
+      if (!state.timerStartedOnce && writingBox.value.trim().length > 0 && state.current.status !== "completed") {
+        startTimer();
+        state.timerStartedOnce = true;
+        saveState();
+      }
+    });
+
+    minWords.addEventListener("input", updateWordDisplay);
+    maxWords.addEventListener("input", updateWordDisplay);
+
+    async function copyToClipboard(text, noteEl, successText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        noteEl.textContent = successText;
+        setTimeout(() => {
+          if (noteEl.textContent === successText) noteEl.textContent = "";
+        }, 2500);
+      } catch {
+        noteEl.textContent = "Copy failed. You can select and copy manually.";
+      }
+    }
+
+    document.getElementById("copyPromptBtn").addEventListener("click", () => {
+      const request = `You are my private daily writing coach.\nGenerate Day ${state.current.dayNumber} of my writing practice.\nKeep it to a 10-minute exercise.\nFormat the response exactly like this:\n1. Title\n2. Prompt\n3. Constraint\n4. Time target\n5. Suggested word count range\n6. What to submit\n\nDesign the exercise to improve me as a writer through deliberate practice, not random novelty.`;
+      copyToClipboard(request, copyPromptNote, "Prompt request copied.");
+    });
+
+    document.getElementById("copyFeedbackBtn").addEventListener("click", () => {
+      const range = `${state.current.min || "[none]"}${state.current.max ? "–" + state.current.max : ""}`;
+      const request = `Here is my Day ${state.current.dayNumber} writing session submission.\nPlease give feedback in exactly this format:\n1. What is working\n2. Best line, image, or moment\n3. What feels weak, vague, flat, or overexplained\n4. One concrete craft note for next time\n5. Optional revision challenge\n\nPrompt:\n${state.current.prompt || "[No prompt pasted]"}\n\nSuggested word count range:\n${range}\n\nSubmission:\n${state.current.writing.trim() || "[Paste my writing here]"}`;
+      copyToClipboard(request, copyFeedbackNote, "Feedback request copied.");
+    });
+
+    let timerInterval = null;
+    let remaining = 600;
+    const timerDisplay = document.getElementById("timerDisplay");
+
+    function renderTimer() {
+      const m = String(Math.floor(remaining / 60)).padStart(2, "0");
+      const s = String(remaining % 60).padStart(2, "0");
+      timerDisplay.textContent = `${m}:${s}`;
+    }
+
+    function startTimer() {
+      if (timerInterval || state.current.status === "completed") return;
+      timerInterval = setInterval(() => {
+        remaining -= 1;
+        renderTimer();
+        if (remaining <= 0) {
+          stopTimer(true);
+        }
+      }, 1000);
+    }
+
+    function stopTimer(resetToFull = false) {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      if (resetToFull) {
+        remaining = 600;
+      }
+      renderTimer();
+    }
+
+    document.getElementById("startTimerBtn").addEventListener("click", startTimer);
+    document.getElementById("stopTimerBtn").addEventListener("click", () => stopTimer(false));
+
+    function showDownloadNote(message) {
+      downloadNote.textContent = message;
+      setTimeout(() => {
+        if (downloadNote.textContent === message) downloadNote.textContent = "";
+      }, 3000);
+    }
+
+    function downloadFile(name, text) {
+      try {
+        const blob = new Blob([text || ""], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+          a.remove();
+        }, 1000);
+        showDownloadNote(`Downloading ${name}`);
+      } catch (err) {
+        showDownloadNote("Download blocked or failed.");
+      }
+    }
+
+    function baseName(type) {
+      return `Day-${state.current.dayNumber}-${state.current.sessionDate}-${type}.txt`;
+    }
+
+    function fullSessionText() {
+      const rawRange = `${state.current.min || ""}${state.current.max ? "–" + state.current.max : ""}`;
+      const range = rawRange || "(none)";
+      return `DAY ${state.current.dayNumber}
+DATE: ${state.current.sessionDate}
+
+PROMPT
+------
+${state.current.prompt || ""}
+
+SUGGESTED WORD COUNT RANGE
+--------------------------
+${range}
+
+SUBMISSION
+----------
+${state.current.writing || ""}
+
+FEEDBACK
+--------
+${state.current.feedback || ""}
+
+REFLECTION
+----------
+${state.current.reflection || ""}`;
+    }
+
+    document.getElementById("dlPromptBtn").addEventListener("click", () => downloadFile(baseName("Prompt"), promptBox.value));
+    document.getElementById("dlWritingBtn").addEventListener("click", () => downloadFile(baseName("Submission"), writingBox.value));
+    document.getElementById("dlFeedbackBtn").addEventListener("click", () => downloadFile(baseName("Feedback"), feedbackBox.value));
+    document.getElementById("dlReflectionBtn").addEventListener("click", () => downloadFile(baseName("Reflection"), reflectionBox.value));
+    document.getElementById("dlFullBtn").addEventListener("click", () => downloadFile(baseName("Full-Session"), fullSessionText()));
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      if (!confirm("Clear the current draft fields for today?")) return;
+      state.current.prompt = "";
+      state.current.writing = "";
+      state.current.feedback = "";
+      state.current.reflection = "";
+      state.current.min = "";
+      state.current.max = "";
+      state.current.status = "ready";
+      state.timerStartedOnce = false;
+      stopTimer(true);
+      saveState();
+      render();
+    });
+
+    completeBtn.addEventListener("click", () => {
+	stopTimer(true);
+      if (state.current.status === "completed") return;
+
+      const frozen = {
+        dayNumber: state.current.dayNumber,
+        sessionDate: state.current.sessionDate || todayLocalDate(),
+        prompt: state.current.prompt,
+        writing: state.current.writing,
+        feedback: state.current.feedback,
+        reflection: state.current.reflection,
+        min: state.current.min,
+        max: state.current.max,
+        completedAt: new Date().toISOString()
+      };
+
+      const existingIndex = state.sessions.findIndex(
+        session => session.dayNumber === frozen.dayNumber
+      );
+
+      if (existingIndex >= 0) {
+        state.sessions[existingIndex] = frozen;
+      } else {
+        state.sessions.push(frozen);
+      }
+
+      state.current.status = "completed";
+      saveState();
+      render();
+    });
+
+    nextDayBtn.addEventListener("click", () => {
+      state.current = createBlankCurrent(state.sessions);
+      state.timerStartedOnce = false;
+      stopTimer(true);
+      saveState();
+      render();
+    });
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (!confirm("Reset Writer's Bench and erase all sessions?")) return;
+
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+});
+
+    renderTimer();
+    render();
+  </script>
+</body>
+</html>
