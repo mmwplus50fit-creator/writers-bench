@@ -518,7 +518,35 @@
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;");
     }
+/* ================================================= */
+/* WRITER'S BENCH AI HELPERS */
+/* ================================================= */
 
+async function callWritersBenchAI(payload) {
+  const res = await fetch("/api/writers-bench", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || "AI request failed");
+  }
+
+  return data;
+}
+
+function setBusyStatus(message) {
+  statusText.textContent = message;
+}
+
+function restoreStatusText() {
+  statusText.textContent = getStatusText();
+}
     /* ================================================= */
     /* SESSION SHAPE HELPERS */
     /* ================================================= */
@@ -841,7 +869,151 @@
       const request = `Here is my Day ${state.current.dayNumber} writing session submission.\nPlease give feedback in exactly this format:\n1. What is working\n2. Best line, image, or moment\n3. What feels weak, vague, flat, or overexplained\n4. One concrete craft note for next time\n5. Optional revision challenge\n\nPrompt:\n${state.current.prompt || "[No prompt pasted]"}\n\nSuggested word count range:\n${range}\n\nSubmission:\n${state.current.writing.trim() || "[Paste my writing here]"}`;
       copyToClipboard(request, copyFeedbackNote, "Feedback request copied.");
     });
+/* ================================================= */
+/* AI PROMPT GENERATION */
+/* ================================================= */
 
+document.getElementById("aiPromptBtn").addEventListener("click", async () => {
+
+  if (state.current.status === "completed") return;
+
+  const btn = document.getElementById("aiPromptBtn");
+  btn.disabled = true;
+  setBusyStatus("Generating Prompt...");
+
+  try {
+
+    const result = await callWritersBenchAI({
+      mode: "prompt",
+      dayNumber: state.current.dayNumber
+    });
+
+    const promptText = `1. Title
+${result.title}
+
+2. Prompt
+${result.prompt}
+
+3. Constraint
+${result.constraint}
+
+4. Time target
+${result.time_target}
+
+5. Suggested word count range
+${result.suggested_word_count_range}
+
+6. What to submit
+${result.what_to_submit}`;
+
+    promptBox.value = promptText;
+    syncCurrentField("prompt", promptText);
+
+    const rangeText = result.suggested_word_count_range || "";
+    const match = rangeText.match(/(\d+)\s*[-–]\s*(\d+)/);
+
+    if (match) {
+      minWords.value = match[1];
+      maxWords.value = match[2];
+      syncCurrentField("min", match[1]);
+      syncCurrentField("max", match[2]);
+    }
+
+    copyPromptNote.textContent = "AI prompt generated.";
+
+    setTimeout(() => {
+      if (copyPromptNote.textContent === "AI prompt generated.") {
+        copyPromptNote.textContent = "";
+      }
+    }, 2500);
+
+    saveState();
+    render();
+
+  } catch (err) {
+
+    copyPromptNote.textContent = `AI prompt failed: ${err.message}`;
+
+  } finally {
+
+    btn.disabled = false;
+    restoreStatusText();
+
+  }
+
+});
+
+/* ================================================= */
+/* AI FEEDBACK */
+/* ================================================= */
+
+document.getElementById("aiFeedbackBtn").addEventListener("click", async () => {
+
+  if (state.current.status === "completed") return;
+
+  const writing = writingBox.value.trim();
+
+  if (!writing) {
+    copyFeedbackNote.textContent = "Write something first.";
+    return;
+  }
+
+  const btn = document.getElementById("aiFeedbackBtn");
+  btn.disabled = true;
+  setBusyStatus("Generating Feedback...");
+
+  try {
+
+    const result = await callWritersBenchAI({
+      mode: "feedback",
+      dayNumber: state.current.dayNumber,
+      prompt: promptBox.value,
+      writing: writingBox.value,
+      minWords: minWords.value,
+      maxWords: maxWords.value
+    });
+
+    const feedbackText = `1. What is working
+${result.what_is_working}
+
+2. Best line, image, or moment
+${result.best_line_image_or_moment}
+
+3. What feels weak, vague, flat, or overexplained
+${result.what_feels_weak_vague_flat_or_overexplained}
+
+4. One concrete craft note for next time
+${result.one_concrete_craft_note_for_next_time}
+
+5. Optional revision challenge
+${result.optional_revision_challenge}`;
+
+    feedbackBox.value = feedbackText;
+    syncCurrentField("feedback", feedbackText);
+
+    copyFeedbackNote.textContent = "AI feedback generated.";
+
+    setTimeout(() => {
+      if (copyFeedbackNote.textContent === "AI feedback generated.") {
+        copyFeedbackNote.textContent = "";
+      }
+    }, 2500);
+
+    saveState();
+    render();
+
+  } catch (err) {
+
+    copyFeedbackNote.textContent = `AI feedback failed: ${err.message}`;
+
+  } finally {
+
+    btn.disabled = false;
+    restoreStatusText();
+
+  }
+
+});    
     /* ================================================= */
     /* TIMER */
     /* ================================================= */
