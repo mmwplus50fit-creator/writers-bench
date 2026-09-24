@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Writer's Bench v2.2.1</title>
+  <title>Writer's Bench v2.2.2</title>
 
   <!-- ================================================= -->
   <!-- EXTERNAL LIBRARIES -->
@@ -127,6 +127,7 @@
 
     button.primary{
       background:var(--button-primary);
+      color:#fff;
       font-weight:bold;
     }
 
@@ -250,6 +251,7 @@
     .brand{font-weight:800;letter-spacing:.15em;font-size:.85rem;color:#d5d5d5}
     .wrap > .panel:first-child{background:#32363a;color:white;border-color:#32363a;padding:26px}
     .wrap > .panel:first-child p{color:#d0d0d0;margin:8px 0 0}
+    .wrap > .panel:first-child .meta{color:#e2e4e7}
     .bench-tabs{display:flex;gap:10px;margin:0 0 22px}
     .bench-tabs button{flex:1;font-weight:700;background:#f2f6fa}
     .bench-tabs button.active{background:#32363a;color:white}
@@ -300,14 +302,14 @@
     <section class="panel stack">
       <h2>Today</h2>
       <div class="row">
-        <button id="copyPromptBtn" class="primary">Copy Prompt Request</button>
-        <button id="aiPromptBtn">Generate Prompt with AI</button>
+        <button id="aiPromptBtn" class="primary">Generate Prompt with AI</button>
+        <button id="copyPromptBtn">Copy Prompt Request</button>
         <button id="startTimerBtn">Start Timer</button>
         <button id="stopTimerBtn">Stop Timer</button>
         <span id="timerDisplay" class="timer">10:00</span>
       </div>
       <div id="copyPromptNote" class="copy-note"></div>
-      <p class="small">Use the copied text in ChatGPT to generate today’s session. Then paste the prompt below.</p>
+      <p class="small"><strong>Generate Prompt with AI</strong> fills the Prompt box below automatically. To work in ChatGPT instead, choose <strong>Copy Prompt Request</strong>, then paste ChatGPT’s exercise into the box.</p>
     </section>
 
     <!-- ================================================= -->
@@ -315,7 +317,7 @@
     <!-- ================================================= -->
     <section class="panel">
       <label for="promptBox">Prompt</label>
-      <textarea id="promptBox" class="auto-grow" placeholder="Paste today's prompt here."></textarea>
+      <textarea id="promptBox" class="auto-grow" placeholder="Generate a prompt with AI, or paste one from ChatGPT here."></textarea>
     </section>
 
     <!-- ================================================= -->
