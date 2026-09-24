@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Writer's Bench v2.1</title>
+  <title>Writer's Bench v2.2</title>
 
   <!-- ================================================= -->
   <!-- EXTERNAL LIBRARIES -->
@@ -15,14 +15,14 @@
     /* ROOT / THEME */
     /* ================================================= */
     :root{
-      --bg:#f7f7f7;
+      --bg:#faf9f6;
       --panel:#ffffff;
-      --text:#222222;
+      --text:#24282c;
       --muted:#666666;
-      --line:#d8d8d8;
-      --button:#ececec;
-      --button-hover:#e2e2e2;
-      --button-primary:#dcdcdc;
+      --line:#cbd2dc;
+      --button:#edf2f7;
+      --button-hover:#e0e7ee;
+      --button-primary:#32363a;
       --amber:#d7941d;
       --green:#2f8f4e;
       --blue:#3a78d4;
@@ -44,7 +44,7 @@
     }
 
     .wrap{
-      max-width:900px;
+      max-width:950px;
       margin:0 auto;
     }
 
@@ -246,6 +246,20 @@
       #writingBox{ min-height:260px; }
       input[type="number"]{ width:100px; }
     }
+    .brand{font-weight:800;letter-spacing:.15em;font-size:.85rem;color:#d5d5d5}
+    .wrap > .panel:first-child{background:#32363a;color:white;border-color:#32363a;padding:26px}
+    .wrap > .panel:first-child p{color:#d0d0d0;margin:8px 0 0}
+    .bench-tabs{display:flex;gap:10px;margin:0 0 22px}
+    .bench-tabs button{flex:1;font-weight:700;background:#f2f6fa}
+    .bench-tabs button.active{background:#32363a;color:white}
+    .hidden{display:none!important}
+    .study-area .panel{border-radius:17px;padding:22px}
+    .study-area select,.study-area input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font:inherit;margin-bottom:16px;background:white}
+    .study-writing{min-height:240px;margin-bottom:14px;border-radius:10px}
+    .study-result{white-space:pre-wrap;line-height:1.6;margin:12px 0 18px}
+    .study-area h3{margin-top:22px}
+    .study-area [role=status]{margin-top:10px;color:var(--muted)}
+    @media(max-width:600px){.bench-tabs{flex-direction:column}}
   </style>
 </head>
 <body>
@@ -255,7 +269,9 @@
     <!-- HEADER -->
     <!-- ================================================= -->
     <section class="panel">
+      <div class="brand">MAGNUS MICHAELS</div>
       <h1>Writer's Bench</h1>
+      <p>Build the craft to bring scenes to life.</p>
       <div class="meta">
         <div><strong>Day:</strong> <span id="dayNumber">1</span></div>
         <div><strong>Date:</strong> <span id="sessionDate">—</span></div>
@@ -265,6 +281,12 @@
       </div>
     </section>
 
+    <nav class="bench-tabs" aria-label="Writer’s Bench sections">
+      <button type="button" class="active" data-tab="daily">Daily Practice</button>
+      <button type="button" data-tab="scene">Scene Studies</button>
+      <button type="button" data-tab="grammar">Grammar &amp; Punctuation</button>
+    </nav>
+    <div id="dailyStudy">
     <!-- ================================================= -->
     <!-- TODAY / TIMER -->
     <!-- ================================================= -->
@@ -381,6 +403,23 @@
       </details>
     </section>
 
+    </div>
+    <div id="sceneStudy" class="hidden study-area">
+      <section class="panel"><h2>Scene Construction Study</h2><p>Write any scene from a novel or comic. The assessment will identify what the scene accomplishes and where a revision could make it stronger.</p>
+        <label for="sceneFormat">Format</label><select id="sceneFormat"><option value="prose">Novel / prose</option><option value="comic">Comic script</option></select>
+        <label for="sceneWriting">Scene</label><textarea id="sceneWriting" class="study-writing" placeholder="Write or paste your scene here."></textarea>
+        <div class="row"><button type="button" id="sceneAssess" class="primary">Assess Scene</button><button type="button" id="sceneExport">Download Study</button></div><div id="sceneStatus" role="status"></div>
+        <h3>Assessment</h3><div id="sceneResult" class="study-result"></div>
+      </section>
+    </div>
+    <div id="grammarStudy" class="hidden study-area">
+      <section class="panel"><h2>Grammar &amp; Punctuation Study</h2>
+        <div class="row"><button type="button" id="grammarReviewMode" class="primary">Review My Prose</button><button type="button" id="grammarExerciseMode">Punctuate an Exercise</button></div>
+        <div id="grammarReview"><label for="grammarWriting">Your prose</label><textarea id="grammarWriting" class="study-writing" placeholder="Write or paste your prose here."></textarea><button type="button" id="grammarReviewBtn" class="primary">Review Grammar &amp; Punctuation</button></div>
+        <div id="grammarExercise" class="hidden"><label for="grammarFocus">Practice focus</label><input id="grammarFocus" type="text" value="commas and sentence boundaries"/><button type="button" id="grammarGenerate">Generate Exercise</button><h3>Exercise</h3><div id="grammarQuestion" class="study-result"></div><label for="grammarAnswer">Your punctuated version</label><textarea id="grammarAnswer" class="study-writing"></textarea><button type="button" id="grammarGrade" class="primary">Check My Answer</button><details id="grammarKey"><summary>Show suggested answer and explanation</summary><div id="grammarKeyText" class="study-result"></div></details></div>
+        <div id="grammarStatus" role="status"></div><h3>Feedback</h3><div id="grammarResult" class="study-result"></div><button type="button" id="grammarExport">Download Study</button>
+      </section>
+    </div>
   </div>
 
   <script>
@@ -1246,6 +1285,86 @@ ${state.current.reflection || ""}`;
       render();
     }
 
+    /* ================================================= */
+    /* INDEPENDENT STUDIES — LOCAL DRAFTS */
+    /* ================================================= */
+    const STUDIES_KEY = "writersBenchStudiesV1";
+    let studies = {};
+    try { studies = JSON.parse(localStorage.getItem(STUDIES_KEY) || "{}"); } catch { studies = {}; }
+    const studyIds = ["sceneFormat","sceneWriting","grammarWriting","grammarFocus","grammarAnswer"];
+    const studyEl = id => document.getElementById(id);
+    const persistStudies = () => localStorage.setItem(STUDIES_KEY, JSON.stringify(studies));
+    studyIds.forEach(id => {
+      const el = studyEl(id);
+      el.value = studies[id] ?? el.value;
+      el.addEventListener("input", () => { studies[id] = el.value; persistStudies(); });
+      el.addEventListener("change", () => { studies[id] = el.value; persistStudies(); });
+    });
+    function showStudyResult(id, value) {
+      studyEl(id).textContent = value || "";
+      studies[id] = value || "";
+      persistStudies();
+    }
+    ["sceneResult","grammarQuestion","grammarResult","grammarKeyText"].forEach(id => showStudyResult(id, studies[id] || ""));
+    document.querySelectorAll("[data-tab]").forEach(button => button.addEventListener("click", () => {
+      const tab = button.dataset.tab;
+      document.querySelectorAll("[data-tab]").forEach(b => b.classList.toggle("active", b === button));
+      studyEl("dailyStudy").classList.toggle("hidden", tab !== "daily");
+      studyEl("sceneStudy").classList.toggle("hidden", tab !== "scene");
+      studyEl("grammarStudy").classList.toggle("hidden", tab !== "grammar");
+    }));
+    async function runStudy(buttonId, statusId, mode, payload, resultId, labels) {
+      const button = studyEl(buttonId), status = studyEl(statusId);
+      button.disabled = true; status.textContent = "Working...";
+      try {
+        const result = await callWritersBenchAI({mode, ...payload});
+        showStudyResult(resultId, labels.map(([key,label]) => `${label}\n${result[key] || ""}`).join("\n\n"));
+        status.textContent = "Study complete. Draft and feedback saved in this browser.";
+        return result;
+      } catch (err) { status.textContent = `Could not complete study: ${err.message}`; }
+      finally { button.disabled = false; }
+      return null;
+    }
+    studyEl("sceneAssess").addEventListener("click", () => {
+      const writing = studyEl("sceneWriting").value.trim();
+      if (!writing) { studyEl("sceneStatus").textContent = "Write a scene first."; return; }
+      runStudy("sceneAssess","sceneStatus","scene",{format:studyEl("sceneFormat").value,writing},"sceneResult",[
+        ["scene_function","Scene function"],["what_works","What works"],["evidence","Evidence"],["construction_gaps","Construction gaps"],["spatial_and_visual_clarity","Spatial and visual clarity"],["strongest_moment","Strongest moment"],["priority_revision","Priority revision"],["revision_exercise","Revision exercise"]]);
+    });
+    function grammarMode(exercise) {
+      studyEl("grammarReview").classList.toggle("hidden", exercise);
+      studyEl("grammarExercise").classList.toggle("hidden", !exercise);
+      studyEl("grammarReviewMode").classList.toggle("primary", !exercise);
+      studyEl("grammarExerciseMode").classList.toggle("primary", exercise);
+      studies.grammarMode = exercise ? "exercise" : "review"; persistStudies();
+    }
+    studyEl("grammarReviewMode").addEventListener("click", () => grammarMode(false));
+    studyEl("grammarExerciseMode").addEventListener("click", () => grammarMode(true));
+    grammarMode(studies.grammarMode === "exercise");
+    studyEl("grammarReviewBtn").addEventListener("click", () => {
+      const writing = studyEl("grammarWriting").value.trim();
+      if (!writing) { studyEl("grammarStatus").textContent = "Write something first."; return; }
+      runStudy("grammarReviewBtn","grammarStatus","grammar_review",{writing},"grammarResult",[
+        ["overview","Overview"],["required_corrections","Required corrections"],["optional_choices","Optional choices"],["corrected_text","Corrected version"],["practice_prompt","Practice"]]);
+    });
+    studyEl("grammarGenerate").addEventListener("click", async () => {
+      const result = await runStudy("grammarGenerate","grammarStatus","grammar_generate",{exercise:studyEl("grammarFocus").value},"grammarQuestion",[["exercise_text","Punctuate this passage"]]);
+      if (result) {
+        studies.exerciseText = result.exercise_text;
+        showStudyResult("grammarKeyText", `Suggested answer\n${result.answer}\n\nExplanation\n${result.explanation}`);
+        studyEl("grammarKey").open = false;
+        studyEl("grammarAnswer").value = ""; studies.grammarAnswer = "";
+        showStudyResult("grammarResult", ""); persistStudies();
+      }
+    });
+    studyEl("grammarGrade").addEventListener("click", () => {
+      const writing = studyEl("grammarAnswer").value.trim();
+      if (!studies.exerciseText || !writing) { studyEl("grammarStatus").textContent = "Generate an exercise and enter your answer first."; return; }
+      runStudy("grammarGrade","grammarStatus","grammar_grade",{exercise:studies.exerciseText,writing},"grammarResult",[
+        ["assessment","Assessment"],["what_is_correct","What is correct"],["changes_to_consider","Changes to consider"],["one_rule_to_remember","One rule to remember"],["possible_answer","Possible answer"]]);
+    });
+    studyEl("sceneExport").addEventListener("click", () => downloadFile("Writers-Bench-Scene-Study.txt", `FORMAT: ${studyEl("sceneFormat").value}\n\nSCENE\n${studyEl("sceneWriting").value}\n\nASSESSMENT\n${studyEl("sceneResult").textContent}`));
+    studyEl("grammarExport").addEventListener("click", () => downloadFile("Writers-Bench-Grammar-Study.txt", studies.grammarMode === "exercise" ? `EXERCISE\n${studies.exerciseText || ""}\n\nMY ANSWER\n${studyEl("grammarAnswer").value}\n\nFEEDBACK\n${studyEl("grammarResult").textContent}\n\nSUGGESTED ANSWER\n${studyEl("grammarKeyText").textContent}` : `MY PROSE\n${studyEl("grammarWriting").value}\n\nFEEDBACK\n${studyEl("grammarResult").textContent}`));
     /* ================================================= */
     /* APP START */
     /* ================================================= */
