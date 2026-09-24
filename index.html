@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Writer's Bench v2.2.2</title>
+  <title>Writer's Bench v2.2.3</title>
 
   <!-- ================================================= -->
   <!-- EXTERNAL LIBRARIES -->
@@ -417,15 +417,15 @@
       <section class="panel"><h2>Scene Construction Study</h2><p>Write any scene from a novel or comic. The assessment will identify what the scene accomplishes and where a revision could make it stronger.</p>
         <label for="sceneFormat">Format</label><select id="sceneFormat"><option value="prose">Novel / prose</option><option value="comic">Comic script</option></select>
         <label for="sceneWriting">Scene</label><textarea id="sceneWriting" class="study-writing" placeholder="Write or paste your scene here."></textarea>
-        <div class="row"><button type="button" id="sceneAssess" class="primary">Assess Scene</button><button type="button" id="sceneExport">Download Study</button></div><div id="sceneStatus" role="status"></div>
+        <div class="row"><button type="button" id="sceneAssess" class="primary">Assess Scene</button><button type="button" id="sceneExport">Download Study</button><button type="button" id="sceneClear">Clear Scene Study</button></div><div id="sceneStatus" role="status"></div>
         <h3>Assessment</h3><div id="sceneResult" class="study-result"></div>
       </section>
     </div>
     <div id="grammarStudy" class="hidden study-area">
       <section class="panel"><h2>Grammar &amp; Punctuation Study</h2>
         <div class="row"><button type="button" id="grammarReviewMode" class="primary">Review My Prose</button><button type="button" id="grammarExerciseMode">Punctuate an Exercise</button></div>
-        <div id="grammarReview"><label for="grammarWriting">Your prose</label><textarea id="grammarWriting" class="study-writing" placeholder="Write or paste your prose here."></textarea><button type="button" id="grammarReviewBtn" class="primary">Review Grammar &amp; Punctuation</button></div>
-        <div id="grammarExercise" class="hidden"><label for="grammarFocus">Practice focus</label><input id="grammarFocus" type="text" value="commas and sentence boundaries"/><button type="button" id="grammarGenerate">Generate Exercise</button><h3>Exercise</h3><div id="grammarQuestion" class="study-result"></div><label for="grammarAnswer">Your punctuated version</label><textarea id="grammarAnswer" class="study-writing"></textarea><button type="button" id="grammarGrade" class="primary">Check My Answer</button><details id="grammarKey"><summary>Show suggested answer and explanation</summary><div id="grammarKeyText" class="study-result"></div></details></div>
+        <div id="grammarReview"><label for="grammarWriting">Your prose</label><textarea id="grammarWriting" class="study-writing" placeholder="Write or paste your prose here."></textarea><button type="button" id="grammarReviewBtn" class="primary">Review Grammar &amp; Punctuation</button><button type="button" id="grammarReviewClear">Clear Review</button></div>
+        <div id="grammarExercise" class="hidden"><label for="grammarFocus">Practice focus</label><input id="grammarFocus" type="text" value="commas and sentence boundaries"/><button type="button" id="grammarGenerate">Generate Exercise</button><h3>Exercise</h3><div id="grammarQuestion" class="study-result"></div><label for="grammarAnswer">Your punctuated version</label><textarea id="grammarAnswer" class="study-writing"></textarea><button type="button" id="grammarGrade" class="primary">Check My Answer</button><button type="button" id="grammarExerciseClear">Clear Exercise</button><details id="grammarKey"><summary>Show suggested answer and explanation</summary><div id="grammarKeyText" class="study-result"></div></details></div>
         <div id="grammarStatus" role="status"></div><h3>Feedback</h3><div id="grammarResult" class="study-result"></div><button type="button" id="grammarExport">Download Study</button>
       </section>
     </div>
@@ -1395,6 +1395,37 @@ ${state.current.reflection || ""}`;
       if (!studies.exerciseText || !writing) { studyEl("grammarStatus").textContent = "Generate an exercise and enter your answer first."; return; }
       runStudy("grammarGrade","grammarStatus","grammar_grade",{exercise:studies.exerciseText,writing},"grammarResult",[
         ["assessment","Assessment"],["what_is_correct","What is correct"],["changes_to_consider","Changes to consider"],["one_rule_to_remember","One rule to remember"],["possible_answer","Possible answer"]]);
+    });
+    studyEl("sceneClear").addEventListener("click", () => {
+      if (!confirm("Clear this scene and its assessment? Download the study first if you want to keep it.")) return;
+      studyEl("sceneWriting").value = "";
+      studies.sceneWriting = "";
+      showStudyResult("sceneResult", "");
+      studyEl("sceneStatus").textContent = "Scene study cleared.";
+      persistStudies();
+      studyEl("sceneWriting").focus();
+    });
+    studyEl("grammarReviewClear").addEventListener("click", () => {
+      if (!confirm("Clear this prose and its feedback? Download the study first if you want to keep it.")) return;
+      studyEl("grammarWriting").value = "";
+      studies.grammarWriting = "";
+      showStudyResult("grammarResult", "");
+      studyEl("grammarStatus").textContent = "Grammar review cleared.";
+      persistStudies();
+      studyEl("grammarWriting").focus();
+    });
+    studyEl("grammarExerciseClear").addEventListener("click", () => {
+      if (!confirm("Clear this exercise, your answer, and its feedback? Download the study first if you want to keep it.")) return;
+      studyEl("grammarAnswer").value = "";
+      studies.grammarAnswer = "";
+      studies.exerciseText = "";
+      showStudyResult("grammarQuestion", "");
+      showStudyResult("grammarResult", "");
+      showStudyResult("grammarKeyText", "");
+      studyEl("grammarKey").open = false;
+      studyEl("grammarStatus").textContent = "Exercise cleared.";
+      persistStudies();
+      studyEl("grammarFocus").focus();
     });
     studyEl("sceneExport").addEventListener("click", () => downloadFile("Writers-Bench-Scene-Study.txt", `FORMAT: ${studyEl("sceneFormat").value}\n\nSCENE\n${studyEl("sceneWriting").value}\n\nASSESSMENT\n${studyEl("sceneResult").textContent}`));
     studyEl("grammarExport").addEventListener("click", () => downloadFile("Writers-Bench-Grammar-Study.txt", studies.grammarMode === "exercise" ? `EXERCISE\n${studies.exerciseText || ""}\n\nMY ANSWER\n${studyEl("grammarAnswer").value}\n\nFEEDBACK\n${studyEl("grammarResult").textContent}\n\nSUGGESTED ANSWER\n${studyEl("grammarKeyText").textContent}` : `MY PROSE\n${studyEl("grammarWriting").value}\n\nFEEDBACK\n${studyEl("grammarResult").textContent}`));
