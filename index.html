@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Writer's Bench v2.2</title>
+  <title>Writer's Bench v2.2.1</title>
 
   <!-- ================================================= -->
   <!-- EXTERNAL LIBRARIES -->
@@ -246,6 +246,7 @@
       #writingBox{ min-height:260px; }
       input[type="number"]{ width:100px; }
     }
+    textarea.auto-grow{min-height:160px;overflow-y:hidden;resize:vertical}
     .brand{font-weight:800;letter-spacing:.15em;font-size:.85rem;color:#d5d5d5}
     .wrap > .panel:first-child{background:#32363a;color:white;border-color:#32363a;padding:26px}
     .wrap > .panel:first-child p{color:#d0d0d0;margin:8px 0 0}
@@ -279,6 +280,12 @@
         <div><strong>Status:</strong> <span id="statusText">Ready</span></div>
         <div><strong>Suggested Time:</strong> <span id="suggestedTimeText">10 minutes</span></div>
       </div>
+      <div class="row" style="margin-top:16px;">
+        <label for="setDayNumber" style="margin:0;">Set practice day</label>
+        <input id="setDayNumber" type="number" min="1" max="30" step="1" style="width:80px;" />
+        <button type="button" id="setDayBtn">Set Day</button>
+        <span id="setDayNote" class="small" role="status"></span>
+      </div>
     </section>
 
     <nav class="bench-tabs" aria-label="Writer’s Bench sections">
@@ -308,7 +315,7 @@
     <!-- ================================================= -->
     <section class="panel">
       <label for="promptBox">Prompt</label>
-      <textarea id="promptBox" placeholder="Paste today's prompt here."></textarea>
+      <textarea id="promptBox" class="auto-grow" placeholder="Paste today's prompt here."></textarea>
     </section>
 
     <!-- ================================================= -->
@@ -589,9 +596,9 @@ function restoreStatusText() {
     /* ================================================= */
     /* SESSION SHAPE HELPERS */
     /* ================================================= */
-    function createBlankCurrent(existingSessions) {
+    function createBlankCurrent(existingSessions, requestedDay) {
       return {
-        dayNumber: (existingSessions?.length || 0) + 1,
+        dayNumber: requestedDay || Math.max(0, ...(existingSessions || []).map(item => Number(item.dayNumber) || 0)) + 1,
         sessionDate: todayLocalDate(),
         prompt: "",
         writing: "",
@@ -825,6 +832,7 @@ function restoreStatusText() {
       statusText.textContent = getStatusText();
 
       promptBox.value = state.current.prompt;
+      resizePrompt();
       writingBox.value = state.current.writing;
       feedbackBox.value = state.current.feedback;
       reflectionBox.value = state.current.reflection;
@@ -863,6 +871,11 @@ function restoreStatusText() {
       });
     }
 
+    function resizePrompt() {
+      promptBox.style.height = "auto";
+      promptBox.style.height = Math.max(160, promptBox.scrollHeight + 2) + "px";
+    }
+    promptBox.addEventListener("input", resizePrompt);
     autosave(promptBox, "prompt");
     autosave(feedbackBox, "feedback");
     autosave(reflectionBox, "reflection");
@@ -1229,13 +1242,31 @@ ${state.current.reflection || ""}`;
     /* START NEXT DAY */
     /* ================================================= */
     nextDayBtn.addEventListener("click", () => {
-      state.current = createBlankCurrent(state.sessions);
+      state.current = createBlankCurrent(state.sessions, Number(state.current.dayNumber) + 1);
+      state.manualDay = state.current.dayNumber;
       state.timerStartedOnce = false;
       stopTimer(true);
       saveState();
       render();
     });
 
+    document.getElementById("setDayBtn").addEventListener("click", () => {
+      const target = Number(document.getElementById("setDayNumber").value);
+      const note = document.getElementById("setDayNote");
+      if (!Number.isInteger(target) || target < 1 || target > 30) {
+        note.textContent = "Choose a day from 1 to 30."; return;
+      }
+      if (state.sessions.some(session => Number(session.dayNumber) === target)) {
+        note.textContent = `Day ${target} is already completed. Choose an unfinished day.`; return;
+      }
+      const hasDraft = ["prompt","writing","feedback","reflection"].some(key => (state.current[key] || "").trim());
+      if (state.current.dayNumber !== target && hasDraft && !confirm("Change the day number for this draft? Your draft text will stay here.")) return;
+      state.manualDay = target;
+      state.current.dayNumber = target;
+      if (state.current.status === "completed") state.current = createBlankCurrent(state.sessions, target);
+      saveState(); render();
+      note.textContent = `Practice day set to ${target}. Existing completed sessions were kept.`;
+    });
     /* ================================================= */
     /* RESET BENCH (LOCAL ONLY) */
     /* ================================================= */
@@ -1268,11 +1299,11 @@ ${state.current.reflection || ""}`;
         );
 
       if (!currentHasDraft) {
-        state.current = createBlankCurrent(state.sessions);
+        state.current = createBlankCurrent(state.sessions, state.manualDay && !state.sessions.some(item => Number(item.dayNumber) === Number(state.manualDay)) ? state.manualDay : undefined);
         state.current.sessionDate = todayLocalDate();
         state.current.status = "ready";
       } else {
-        const nextDayNumber = state.sessions.length + 1;
+        const nextDayNumber = Math.max(0, ...state.sessions.map(item => Number(item.dayNumber) || 0)) + 1;
         if (!state.current.dayNumber || state.current.dayNumber < nextDayNumber) {
           state.current.dayNumber = nextDayNumber;
         }
