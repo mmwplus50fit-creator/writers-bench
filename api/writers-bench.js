@@ -1,204 +1,71 @@
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+const MAX_TEXT = 24000;
 
-  try {
-    const {
-      mode,
-      dayNumber,
-      prompt,
-      writing,
-      minWords,
-      maxWords
-    } = req.body || {};
+function schema(properties) {
+  return { type: "object", additionalProperties: false, properties,
+    required: Object.keys(properties) };
+}
+const str = { type: "string" };
 
-    if (!mode) {
-      return res.status(400).json({ error: "Missing mode" });
-    }
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: "Missing OPENAI_API_KEY on server" });
-    }
-
-    const model = process.env.OPENAI_MODEL || "gpt-5";
-
-    let systemPrompt = "";
-    let userPrompt = "";
-    let schema = null;
-
-    if (mode === "prompt") {
-      systemPrompt = `
-You are Writer's Bench, a private daily writing coach.
-Create one deliberate-practice writing session.
-Avoid random novelty for its own sake.
-Keep the session concise, clear, and useful.
-Return only valid JSON that matches the schema exactly. Do not include markdown, code fences, or explanatory text.
-`.trim();
-
-      userPrompt = `
-Generate Day ${dayNumber || 1} of writing practice.
-
-Requirements:
-- Keep it to a 10-minute exercise.
-- Focus on craft improvement through deliberate practice.
-- Return exactly these fields:
-  1. title
-  2. prompt
-  3. constraint
-  4. time_target
-  5. suggested_word_count_range
-  6. what_to_submit
-`.trim();
-
-      schema = {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          title: { type: "string" },
-          prompt: { type: "string" },
-          constraint: { type: "string" },
-          time_target: { type: "string" },
-          suggested_word_count_range: { type: "string" },
-          what_to_submit: { type: "string" }
-        },
-        required: [
-          "title",
-          "prompt",
-          "constraint",
-          "time_target",
-          "suggested_word_count_range",
-          "what_to_submit"
-        ]
-      };
-    } else if (mode === "feedback") {
-      systemPrompt = `
-You are Writer's Bench, a calm, encouraging, honest writing coach.
-Give brief, concrete craft feedback.
-Do not be gushy.
-Do not be cruel.
-Return only valid JSON that matches the schema exactly. Do not include markdown, code fences, or explanatory text.
-`.trim();
-
-      userPrompt = `
-This is Day ${dayNumber || 1} of my writing practice.
-
-Prompt:
-${prompt || "[No prompt provided]"}
-
-Suggested word count range:
-${minWords || ""}${maxWords ? "–" + maxWords : ""}
-
-Submission:
-${writing || "[No writing provided]"}
-
-Return exactly these fields:
-1. what_is_working
-2. best_line_image_or_moment
-3. what_feels_weak_vague_flat_or_overexplained
-4. one_concrete_craft_note_for_next_time
-5. optional_revision_challenge
-`.trim();
-
-      schema = {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          what_is_working: { type: "string" },
-          best_line_image_or_moment: { type: "string" },
-          what_feels_weak_vague_flat_or_overexplained: { type: "string" },
-          one_concrete_craft_note_for_next_time: { type: "string" },
-          optional_revision_challenge: { type: "string" }
-        },
-        required: [
-          "what_is_working",
-          "best_line_image_or_moment",
-          "what_feels_weak_vague_flat_or_overexplained",
-          "one_concrete_craft_note_for_next_time",
-          "optional_revision_challenge"
-        ]
-      };
-    } else {
-      return res.status(400).json({ error: "Invalid mode" });
-    }
-
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        input: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: userPrompt
-          }
-        ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "writers_bench_output",
-            schema
-          }
-        }
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: data?.error?.message || "OpenAI request failed",
-        raw: data
-      });
-    }
-
-    let parsed = null;
-
-try {
-  if (typeof data.output_text === "string" && data.output_text.trim()) {
-    parsed = JSON.parse(data.output_text);
-  } else {
-    const textParts = [];
-
-    for (const item of data.output || []) {
-      for (const content of item.content || []) {
-        if (content.type === "output_text" && typeof content.text === "string") {
-          textParts.push(content.text);
-        }
-      }
-    }
-
-    const combined = textParts.join("").trim();
-
-    if (!combined) {
-      return res.status(500).json({
-        error: "No JSON text returned by model",
-        raw: data
-      });
-    }
-
-    parsed = JSON.parse(combined);
-  }
-} catch (err) {
-  return res.status(500).json({
-    error: "Could not parse model JSON output",
-    detail: err.message,
-    raw_text: data.output_text || null
-  });
+function requestFor(body) {
+  const { mode, dayNumber, prompt, writing, minWords, maxWords, format, exercise } = body;
+  if (mode === "prompt") return {
+    system: "You are Writer's Bench, a precise private writing coach. Return only schema-valid JSON.",
+    user: `Create Day ${Number(dayNumber) || 1} of a 30-day sequence. Ten minutes. Third-person objective by default. Develop visceral, visual storytelling using observable behavior, cause and effect, purposeful sensory detail, subtext, spatial control, precise sentences, and effective endings. Revisit prior skills while advancing one skill. Craft reminder: Actor → Action → Drill down on the action → Next action. Do not claim knowledge of earlier submissions. Return the six requested fields.`,
+    output: schema({ title:str, prompt:str, constraint:str, time_target:str, suggested_word_count_range:str, what_to_submit:str })
+  };
+  if (mode === "feedback") return {
+    system: "You are Writer's Bench, a candid, specific writing coach. Assess the unedited submission against its prompt. Cite actual evidence, avoid invented details, and return only schema-valid JSON.",
+    user: `Day ${Number(dayNumber)||1}. Prompt:\n${prompt||"(none)"}\nSuggested word range: ${minWords||""}–${maxWords||""}\nSubmission:\n${writing}\nReturn the established five feedback fields. Attend to actor → action → drill down → next action.`,
+    output: schema({ what_is_working:str, best_line_image_or_moment:str, what_feels_weak_vague_flat_or_overexplained:str, one_concrete_craft_note_for_next_time:str, optional_revision_challenge:str })
+  };
+  if (mode === "scene") return {
+    system: "You assess scene construction for learning, not as an absolute formula. Cite brief exact excerpts as evidence. Distinguish an intentional quiet or observational scene from an incomplete one. For comics consider panel-readable actions and visual transitions. Return only schema-valid JSON.",
+    user: `Format: ${format === "comic" ? "comic script" : "prose"}. Evaluate goal or immediate pressure, opposition, action and reaction, change, spatial and visual clarity, subtext, and ending. Identify one strongest moment, the most consequential revision, and a practical revision exercise. Do not rewrite the scene. Scene:\n${writing}`,
+    output: schema({ scene_function:str, what_works:str, evidence:str, construction_gaps:str, spatial_and_visual_clarity:str, strongest_moment:str, priority_revision:str, revision_exercise:str })
+  };
+  if (mode === "grammar_review") return {
+    system: "You are a careful grammar and punctuation tutor. Distinguish required corrections from stylistic options. Preserve the writer's voice and dialect. Semicolons are not mandatory when a period or conjunction is valid. Quote only short relevant excerpts. Return only schema-valid JSON.",
+    user: `Review this text. Give up to five specific teachable points, or say plainly if no corrections are needed. Give a corrected version and a short practice prompt. Text:\n${writing}`,
+    output: schema({ overview:str, required_corrections:str, optional_choices:str, corrected_text:str, practice_prompt:str })
+  };
+  if (mode === "grammar_generate") return {
+    system: "You are a grammar and punctuation tutor. Return only schema-valid JSON.",
+    user: `Generate a short original prose exercise of 2–4 sentences without punctuation or capitalization for the student to repair. Focus: ${exercise||"commas, sentence boundaries, and semicolons"}. Include a clearly punctuated answer and explanation. No copyrighted excerpts.`,
+    output: schema({ exercise_text:str, answer:str, explanation:str })
+  };
+  if (mode === "grammar_grade") return {
+    system: "You are a grammar tutor. Accept more than one grammatically sound punctuation solution; explain meaningful differences. Preserve the student's wording. Return only schema-valid JSON.",
+    user: `Unpunctuated exercise:\n${exercise}\nStudent answer:\n${writing}\nAssess the punctuation and capitalization. Do not penalize a valid alternative to a model answer.`,
+    output: schema({ assessment:str, what_is_correct:str, changes_to_consider:str, one_rule_to_remember:str, possible_answer:str })
+  };
+  return null;
 }
 
-    return res.status(200).json(parsed);
-  } catch (err) {
-    return res.status(500).json({
-      error: err.message || "Unknown server error"
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({error:"Method not allowed"});
+  const body = req.body || {};
+  const spec = requestFor(body);
+  if (!spec) return res.status(400).json({error:"Invalid mode"});
+  for (const key of ["writing", "prompt", "exercise"]) {
+    if (body[key] != null && (typeof body[key] !== "string" || body[key].length > MAX_TEXT))
+      return res.status(400).json({error:`Invalid or oversized ${key}`});
+  }
+  if (["feedback","scene","grammar_review","grammar_grade"].includes(body.mode) && !body.writing?.trim())
+    return res.status(400).json({error:"Writing is required"});
+  if (body.mode === "grammar_grade" && !body.exercise?.trim())
+    return res.status(400).json({error:"Generate an exercise first"});
+  if (!process.env.OPENAI_API_KEY) return res.status(500).json({error:"Missing OPENAI_API_KEY on server"});
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method:"POST", headers:{"Content-Type":"application/json",Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},
+      body:JSON.stringify({model:process.env.OPENAI_MODEL || "gpt-5", input:[{role:"system",content:spec.system},{role:"user",content:spec.user}], text:{format:{type:"json_schema",name:"writers_bench_output",schema:spec.output,strict:true}}})
     });
+    const data = await response.json();
+    if (!response.ok) return res.status(response.status).json({error:data?.error?.message || "OpenAI request failed"});
+    const raw = data.output_text || (data.output||[]).flatMap(item=>(item.content||[]).filter(c=>c.type==="output_text").map(c=>c.text)).join("");
+    if (!raw) return res.status(502).json({error:"No response text returned by model"});
+    return res.status(200).json(JSON.parse(raw));
+  } catch (err) {
+    return res.status(502).json({error:err.message || "AI request failed"});
   }
 }
